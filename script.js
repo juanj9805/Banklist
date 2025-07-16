@@ -1,13 +1,32 @@
 'use strict';
 
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
 // BANKIST APP
 
+/////////////////////////////////////////////////
 // Data
+
+// DIFFERENT DATA! Contains movement dates, currency and locale
+
 const account1 = {
   owner: 'Jonas Schmedtmann',
-  movements: [200, 450, -400, 3000, -650, -130, 70, 1300],
+  movements: [200, 455.23, -306.5, 25000, -642.21, -133.9, 79.97, 1300],
   interestRate: 1.2, // %
   pin: 1111,
+
+  movementsDates: [
+    '2019-11-18T21:31:17.178Z',
+    '2019-12-23T07:42:02.383Z',
+    '2020-01-28T09:15:04.904Z',
+    '2020-04-01T10:17:24.185Z',
+    '2020-05-08T14:11:59.604Z',
+    '2020-05-27T17:01:17.194Z',
+    '2020-07-11T23:36:17.929Z',
+    '2020-07-12T10:51:36.790Z',
+  ],
+  currency: 'EUR',
+  locale: 'pt-PT', // de-DE
 };
 
 const account2 = {
@@ -15,31 +34,25 @@ const account2 = {
   movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
   interestRate: 1.5,
   pin: 2222,
+
+  movementsDates: [
+    '2019-11-01T13:15:33.035Z',
+    '2019-11-30T09:48:16.867Z',
+    '2019-12-25T06:04:23.907Z',
+    '2020-01-25T14:18:46.235Z',
+    '2020-02-05T16:33:06.386Z',
+    '2020-04-10T14:43:26.374Z',
+    '2020-06-25T18:49:59.371Z',
+    '2020-07-26T12:01:20.894Z',
+  ],
+  currency: 'USD',
+  locale: 'en-US',
 };
 
-const account3 = {
-  owner: 'Steven Thomas Williams',
-  movements: [200, -200, 340, -300, -20, 50, 400, -460],
-  interestRate: 0.7,
-  pin: 3333,
-};
+const accounts = [account1, account2];
 
-const account4 = {
-  owner: 'Sarah Smith',
-  movements: [430, 1000, 700, 50, 90],
-  interestRate: 1,
-  pin: 4444,
-};
-
-const accounts = [account1, account2, account3, account4];
-
-const currencies = new Map([
-  ['USD', 'United States dollar'],
-  ['EUR', 'Euro'],
-  ['GBP', 'Pound sterling'],
-]);
-
-// // HTML Elements
+/////////////////////////////////////////////////
+// Elements
 const labelWelcome = document.querySelector('.welcome');
 const labelDate = document.querySelector('.date');
 const labelBalance = document.querySelector('.balance__value');
@@ -65,55 +78,67 @@ const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
-//
-const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-
+/////////////////////////////////////////////////
 // Functions
-const displayMovements = function (movements) {
+
+const displayMovements = function (movements, sort = false) {
   containerMovements.innerHTML = '';
-  movements.forEach(function (mov, i) {
+  // Here We use a a conditional to asign a value to sort, and we use two array methods, slice to create a shallow copy of the original array and then sorted
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+
+  movs.forEach(function (mov, i) {
+    // Here we create a variable to assign a conditional due to the same logic is used on two chunk of codes here in this function, this made our code cleaner
     const type = mov > 0 ? 'deposit' : 'withdrawal';
-    const html = `        
-    <div class="movements__row">
-    <div class="movements__type movements__type--${type}">${i + 1} ${type}
-    </div>
-    <div class="movements__date">3 days ago</div>
-    <div class="movements__value">${mov}€</div>
-    </div>`;
+
+    // Here we create the html structure and assign variables in dinamically way
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${type}">${
+      i + 1
+    } ${type}</div>
+        <div class="movements__value">${mov}€</div>
+      </div>
+    `;
+
     containerMovements.insertAdjacentHTML('afterbegin', html);
   });
 };
 
-const eurToUsd = 1.1;
-const interes = 1.2;
-const meur = movements.map(n => Math.floor(n * eurToUsd));
-/////////////////////////////////////////////////
-// LECTURES
-
-const calcPrintBalance = function (acc) {
-  const balance = acc.movements.reduce((acc, cur) => acc + cur, 0);
-  acc.balance = balance;
-  labelBalance.textContent = `${balance} EUR`;
+const calcDisplayBalance = function (acc) {
+  // We use the reduce method to calculate the balance adding all the movements
+  acc.balance = acc.movements.reduce((acc, mov) => acc + mov, 0);
+  // Call our html element to assign the value
+  labelBalance.textContent = `${acc.balance}€`;
 };
 
+// Create a function that contains all the insights that we want to show
 const calcDisplaySummary = function (acc) {
+  // We filter just the negatives movements and assign them to a varaible called incomes(new array)
+  // Then we gather all this movements using reduce methood and we calculate the total ammonunt
   const incomes = acc.movements
-    .filter(move => move >= 0)
-    .reduce((acc, move) => acc + move);
-  labelSumIn.textContent = incomes;
+    .filter(mov => mov > 0)
+    .reduce((acc, mov) => acc + mov, 0);
+  labelSumIn.textContent = `${incomes}€`;
 
-  const outcomes = acc.movements
-    .filter(move => move < 0)
-    .reduce((acc, move) => acc + move);
-  labelSumOut.textContent = Math.abs(outcomes);
+  // The same logic of above just we just changed the condition from 0> to <0
+  const out = acc.movements
+    .filter(mov => mov < 0)
+    .reduce((acc, mov) => acc + mov, 0);
+  labelSumOut.textContent = `${Math.abs(out)}€`;
 
+  // Here we chain some methods to get a result,first filter, then based on that we transform this array using map, filter again to clean the result and then calculate the total amount
   const interest = acc.movements
     .filter(mov => mov > 0)
-    .map(move => (move * acc.interestRate) / 100)
-    .reduce((acc, move) => acc + move, 0);
-  labelSumInterest.textContent = Math.floor(interest);
+    .map(deposit => (deposit * acc.interestRate) / 100)
+    .filter((int, i, arr) => {
+      // console.log(arr);
+      return int >= 1;
+    })
+    .reduce((acc, int) => acc + int, 0);
+  labelSumInterest.textContent = `${interest}€`;
 };
 
+// We create user names reducing their names, We decided to modify the values on the original array and chaining string methods, firstable as we always must transform the string to lower case, split the string(this generate an array following some condition(On this case each word of the string and these words now are an array)) and due to this string right now is an array we use an array method to select the first letter on each word and then using the join method we become the array again into a string with the necessary values
 const createUsernames = function (accs) {
   accs.forEach(function (acc) {
     acc.username = acc.owner
@@ -123,82 +148,80 @@ const createUsernames = function (accs) {
       .join('');
   });
 };
-
+// Very important always call the functions and give them the arguments they need
 createUsernames(accounts);
 
-const deposits = movements.filter(move => move > 0);
-const withdrawal = movements.filter(move => move < 0);
-
-const maxi = movements.reduce(
-  (acc, cur) => (acc > cur ? acc : cur),
-  movements[0]
-);
-
-const updateUi = function (currentAccount) {
+// Wanting to have a cleaner code, we determined that this called to a functions are a proccess that we use more than once, We took the decison to create a variable and store them there to call the 3 function just once
+const updateUI = function (acc) {
   // Display movements
-  displayMovements(currentAccount.movements);
+  displayMovements(acc.movements);
 
   // Display balance
-  calcPrintBalance(currentAccount);
+  calcDisplayBalance(acc);
 
   // Display summary
-  calcDisplaySummary(currentAccount);
+  calcDisplaySummary(acc);
 };
 
-const ok = movements
-  .filter(mov => mov > 0)
-  .map(mov => Math.round(mov * eurToUsd))
-  .reduce((acc, mov) => acc + mov, 0);
-
-// Event handler
+///////////////////////////////////////
+// Event handlers
+// The value here gonna change,So for that reason we assig it to a variable let, and is a piece of code that we gonna call from diferents scopes so we leave it in the global scope
 let currentAccount;
+
+// To have some methods from the event we assign the value e(convention)as parameter
 btnLogin.addEventListener('click', function (e) {
+  // Prevent form from submitting
   e.preventDefault();
 
+  // We access to a currentAcount and assign a logic that tell us which is the account that login to the interface
   currentAccount = accounts.find(
     acc => acc.username === inputLoginUsername.value
   );
+  // console.log(currentAccount);
 
+  // We use optional chaninng to avoid errors when we access to nested properties or values that we don't know if they exists or not
   if (currentAccount?.pin === Number(inputLoginPin.value)) {
     // Display UI and message
-    labelWelcome.textContent = `Welcome back ${
+    labelWelcome.textContent = `Welcome back, ${
       currentAccount.owner.split(' ')[0]
     }`;
+    // Show the Ui changing the value of the opacity(html element)
+    containerApp.style.opacity = 100;
+
+    // Clear input fields
+    inputLoginUsername.value = inputLoginPin.value = '';
+    inputLoginPin.blur();
+
+    // Update UI
+    updateUI(currentAccount);
   }
-
-  containerApp.classList.add('log');
-
-  updateUi(currentAccount);
-
-  inputLoginUsername.value = inputLoginPin.value = '';
-  inputLoginPin.blur();
 });
-
-// console.log(accounts);
-console.log(accounts);
 
 btnTransfer.addEventListener('click', function (e) {
   e.preventDefault();
-
+  // We need a number and the value that users put on a field always come as strings, So we change this string to number
+  // !Important use .value to be able to read the value
   const amount = Number(inputTransferAmount.value);
-  const receiverAccount = accounts.find(
+
+  const receiverAcc = accounts.find(
     acc => acc.username === inputTransferTo.value
   );
-
-  console.log(amount, receiverAccount);
   inputTransferAmount.value = inputTransferTo.value = '';
-  inputTransferAmount.blur();
 
   if (
     amount > 0 &&
+    receiverAcc &&
     currentAccount.balance >= amount &&
-    receiverAccount &&
-    receiverAccount.username !== currentAccount.username
+    // This logic here is very important because, avoid that users transfer money to themselves
+    receiverAcc?.username !== currentAccount.username
   ) {
+    // Doing the transfer
     currentAccount.movements.push(-amount);
-    receiverAccount.movements.push(amount);
+    receiverAcc.movements.push(amount);
+
+    // Update UI
+    updateUI(currentAccount);
   }
-  updateUi(currentAccount);
 });
 
 btnLoan.addEventListener('click', function (e) {
@@ -207,18 +230,17 @@ btnLoan.addEventListener('click', function (e) {
   const amount = Number(inputLoanAmount.value);
 
   if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
+    // Add movement
     currentAccount.movements.push(amount);
 
-    updateUi(currentAccount);
+    // Update UI
+    updateUI(currentAccount);
   }
-
-  inputLoanAmount.value = '0';
+  inputLoanAmount.value = '';
 });
 
 btnClose.addEventListener('click', function (e) {
   e.preventDefault();
-
-  console.log(accounts);
 
   if (
     inputCloseUsername.value === currentAccount.username &&
@@ -227,14 +249,26 @@ btnClose.addEventListener('click', function (e) {
     const index = accounts.findIndex(
       acc => acc.username === currentAccount.username
     );
+    console.log(index);
+    // .indexOf(23)
 
+    // Delete account
     accounts.splice(index, 1);
-    containerApp.classList.remove('log');
+
+    // Hide UI
+    containerApp.style.opacity = 0;
   }
 
   inputCloseUsername.value = inputClosePin.value = '';
-  console.log(accounts);
-  // btnClose.ariaDisabled();
-  // accounts.findIndex(amountDelete);
 });
-// console.log(accounts);
+
+let sorted = false;
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, !sorted);
+  sorted = !sorted;
+});
+
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+// LECTURES
