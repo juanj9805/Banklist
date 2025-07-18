@@ -81,14 +81,25 @@ const inputClosePin = document.querySelector('.form__input--pin');
 /////////////////////////////////////////////////
 // Functions
 
-const displayMovements = function (movements, sort = false) {
+const displayMovements = function (acc, sort = false) {
   containerMovements.innerHTML = '';
   // Here We use a a conditional to asign a value to sort, and we use two array methods, slice to create a shallow copy of the original array and then sorted
-  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+  const movs = sort
+    ? acc.movements.slice().sort((a, b) => a - b)
+    : acc.movements;
 
   movs.forEach(function (mov, i) {
     // Here we create a variable to assign a conditional due to the same logic is used on two chunk of codes here in this function, this made our code cleaner
     const type = mov > 0 ? 'deposit' : 'withdrawal';
+
+    const date = new Date(acc.movementsDates[i]);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    const displayDate = `${day < 10 ? `0${day}` : day}/${
+      month < 10 ? `0${month}` : month
+    }/${year}`;
 
     // Here we create the html structure and assign variables in dinamically way
     const html = `
@@ -96,6 +107,7 @@ const displayMovements = function (movements, sort = false) {
         <div class="movements__type movements__type--${type}">${
       i + 1
     } ${type}</div>
+        <div class="movements__date">${displayDate}</div>
         <div class="movements__value">${mov}€</div>
       </div>
     `;
@@ -154,7 +166,7 @@ createUsernames(accounts);
 // Wanting to have a cleaner code, we determined that this called to a functions are a proccess that we use more than once, We took the decison to create a variable and store them there to call the 3 function just once
 const updateUI = function (acc) {
   // Display movements
-  displayMovements(acc.movements);
+  displayMovements(acc);
 
   // Display balance
   calcDisplayBalance(acc);
@@ -163,10 +175,39 @@ const updateUI = function (acc) {
   calcDisplaySummary(acc);
 };
 
-///////////////////////////////////////
-// Event handlers
-// The value here gonna change,So for that reason we assig it to a variable let, and is a piece of code that we gonna call from diferents scopes so we leave it in the global scope
 let currentAccount;
+///////////////////////////////////////
+const startLogOutTimer = function () {
+  // Set time to 5 minutes
+  let time = 299;
+  // Call timer every seconds
+  const timer = setInterval(() => {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    // In each call, printe the remainig time to UI
+    labelTimer.textContent = `${min}:${sec}`;
+
+    // Decrease 1s
+    time--;
+
+    if (time === 0) {
+      clearInterval(timer);
+      containerApp.style.opacity = 0;
+      labelWelcome.textContent = `${currentAccount.owner} Login again`;
+    }
+  }, 1000);
+
+  // When 0 seconds, stup timer log out user
+};
+
+// Event handlers
+
+// FAKE ALWAYS LOGGED IN
+currentAccount = account1;
+updateUI(currentAccount);
+containerApp.style.opacity = 100;
+
+// The value here gonna change,So for that reason we assig it to a variable let, and is a piece of code that we gonna call from diferents scopes so we leave it in the global scope
 
 // To have some methods from the event we assign the value e(convention)as parameter
 btnLogin.addEventListener('click', function (e) {
@@ -188,12 +229,25 @@ btnLogin.addEventListener('click', function (e) {
     // Show the Ui changing the value of the opacity(html element)
     containerApp.style.opacity = 100;
 
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+
+    labelDate.textContent = `${day < 10 ? `0${day}` : day}/${
+      month < 10 ? `0${month}` : month
+    }/${year}, ${hour}:${minutes < 10 ? `0${minutes}` : minutes}`;
+
     // Clear input fields
     inputLoginUsername.value = inputLoginPin.value = '';
     inputLoginPin.blur();
 
     // Update UI
     updateUI(currentAccount);
+    // Counter
+    startLogOutTimer();
   }
 });
 
@@ -219,6 +273,10 @@ btnTransfer.addEventListener('click', function (e) {
     currentAccount.movements.push(-amount);
     receiverAcc.movements.push(amount);
 
+    // Add transfer date
+    currentAccount.movementsDates.push(new Date());
+    receiverAcc.movementsDates.push(new Date());
+
     // Update UI
     updateUI(currentAccount);
   }
@@ -230,11 +288,16 @@ btnLoan.addEventListener('click', function (e) {
   const amount = Number(inputLoanAmount.value);
 
   if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
-    // Add movement
-    currentAccount.movements.push(amount);
+    setTimeout(() => {
+      // Add movement
+      currentAccount.movements.push(amount);
 
-    // Update UI
-    updateUI(currentAccount);
+      // Add new date
+      currentAccount.movementsDates.push(new Date());
+
+      // Update UI
+      updateUI(currentAccount);
+    }, 3000);
   }
   inputLoanAmount.value = '';
 });
@@ -265,7 +328,7 @@ btnClose.addEventListener('click', function (e) {
 let sorted = false;
 btnSort.addEventListener('click', function (e) {
   e.preventDefault();
-  displayMovements(currentAccount.movements, !sorted);
+  displayMovements(currentAccount, !sorted);
   sorted = !sorted;
 });
 
